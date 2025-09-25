@@ -1,0 +1,68 @@
+mod models;
+mod expense_repository;
+
+use crate::models::{Action, ActionError};
+use crate::models::errors::{LocalizedError};
+
+use std::env;
+
+fn main() {
+   let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        println!("Please provide a action")
+    }
+
+    let action = match map_action(&args) {
+        Ok(a) => a,
+        Err(error) => panic!("{}", error.localized_description())
+    };
+
+    match action {
+        Action::Add {description, amount} => {
+            match expense_repository::create_expense(description, amount) {
+                Ok(_) => {}
+                Err(error) => { println!("{}", error.localized_description()) }
+            }
+        }
+
+        _ => panic!("Not implemented yet")
+    }
+}
+
+fn map_action(args: &Vec<String>) -> Result<Action, ActionError> {
+    let action = args.get(1).unwrap();
+
+    match action.as_str() {
+        "add" => map_add_action(args),
+        "list" => Ok(Action::List),
+        _ => Err(ActionError::UnknowAction)
+    }
+}
+
+fn map_add_action(args: &Vec<String>) -> Result<Action, ActionError> {
+    let description_index = match args.iter().position(|x| x == "--description") {
+        Some(index) => index + 1,
+        None => Err(ActionError::ArgumentNotFound)?
+    };
+
+    let Some(description) = args.iter().nth(description_index) else {
+        Err(ActionError::ArgumentNotFound)?
+    };
+
+    let amount_index = match args.iter().position(|x| x == "--amount") {
+        Some(index) => index + 1,
+        None => Err(ActionError::ArgumentNotFound)?
+    };
+
+    let Some(amount) = args.get(amount_index) else {
+        Err(ActionError::ArgumentNotFound)?
+    };
+
+    let amount = match amount.parse::<i32>() {
+        Ok(amount) => amount,
+        Err(_e) => Err(ActionError::ArgumentInvalid)?
+    };
+
+   Ok(Action::Add { description: description.to_string(), amount})
+}
+
