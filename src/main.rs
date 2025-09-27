@@ -2,9 +2,9 @@ mod models;
 mod expense_repository;
 
 use crate::models::{Action, ActionError};
-use crate::models::errors::{LocalizedError};
 
-use std::env;
+use comfy_table::{Table};
+use std::{env, vec};
 
 fn main() {
    let args: Vec<String> = env::args().collect();
@@ -14,17 +14,17 @@ fn main() {
 
     let action = match map_action(&args) {
         Ok(a) => a,
-        Err(error) => panic!("{}", error.localized_description())
+        Err(error) => panic!("{error}")
     };
 
     match action {
         Action::Add {description, amount} => {
             match expense_repository::create_expense(description, amount) {
                 Ok(_) => {}
-                Err(error) => { println!("{}", error.localized_description()) }
+                Err(error) => { println!("{error}") }
             }
-        }
-
+        },
+        Action::List => { show_expense_list() },
         _ => panic!("Not implemented yet")
     }
 }
@@ -64,5 +64,41 @@ fn map_add_action(args: &Vec<String>) -> Result<Action, ActionError> {
     };
 
    Ok(Action::Add { description: description.to_string(), amount})
+}
+
+fn show_expense_list() {
+    match expense_repository::read_expenses() {
+        Ok(list) => {
+            if list.is_empty() {
+                println!("No expenses found");
+                return;
+            }
+
+            let mut table = Table::new();
+            table.set_header(vec![
+                "ID",
+                "Date",
+                "Description",
+                "Amount"
+            ]);
+
+            for index in 0..list.len() {
+                match list.get(index) {
+                    Ok(expense) => {
+                        table.add_row(vec![
+                            expense.id().to_string(),
+                            expense.date().format("%d/%m/%Y %H:%M:%S").to_string(),
+                            expense.description().to_string(),
+                            format!("{}€", expense.amount())
+                        ]);
+                    },
+                    Err(error) => { panic!("{error}") }
+                }
+            }
+
+            println!("{table}");
+        },
+        Err(error) => { panic!("{error}") }
+    };
 }
 

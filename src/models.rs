@@ -1,11 +1,10 @@
-pub mod errors;
-
-use crate::models::errors::LocalizedError;
-
+use std::error::Error;
+use std::fmt;
 use chrono::{DateTime, Utc};
 use serde::{ Serialize, Deserialize };
 use crate::models::ExpenseListError::ExpenseNotFound;
 
+#[derive(Debug)]
 pub enum Action {
     Add { description: String, amount: i32 },
     List ,
@@ -26,7 +25,10 @@ impl Expense {
         Expense { id, date: Utc::now(), description, amount }
     }
 
-    pub(crate) fn id(&self) -> u32 { self.id }
+    pub fn id(&self) -> u32 { self.id }
+    pub fn date(&self) -> DateTime<Utc> { self.date }
+    pub fn description(&self) -> &String { &self.description }
+    pub fn amount(&self) -> i32 { self.amount }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -49,27 +51,52 @@ impl ExpenseList {
         Ok(())
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.list.is_empty()
+    }
+
+    pub fn first(&self) -> Result<&Expense, ExpenseListError> {
+        match self.list.first() {
+            Some(first) => Ok(first),
+            None => Err(ExpenseNotFound)
+        }
+    }
+
     pub fn last(&self) -> Result<&Expense, ExpenseListError> {
         match self.list.last() {
             Some(last) => Ok(last),
             None => Err(ExpenseNotFound)
         }
     }
+
+    pub fn get(&self, index: usize) -> Result<&Expense, ExpenseListError> {
+        match self.list.get(index) {
+            Some(expense) => Ok(expense),
+            None => Err(ExpenseNotFound)
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.list.len()
+    }
 }
 
+#[derive(Debug)]
 pub enum ExpenseListError {
     NegativeAmount,
     ExpenseNotFound
 }
 
-impl LocalizedError for ExpenseListError {
-    fn localized_description(&self) -> &str {
+impl fmt::Display for ExpenseListError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ExpenseListError::NegativeAmount => "Negative amount given",
-            ExpenseNotFound => "The expense search was not found at the specified index"
+            ExpenseListError::NegativeAmount => write!(f, "Negative amount given"),
+            ExpenseNotFound => write!(f, "The expense search was not found at the specified index")
         }
     }
 }
+
+impl Error for ExpenseListError {}
 
 pub enum ActionError {
     UnknowAction,
@@ -77,12 +104,12 @@ pub enum ActionError {
     ArgumentInvalid
 }
 
-impl LocalizedError for ActionError {
-    fn localized_description(&self) -> &str {
+impl fmt::Display for ActionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ActionError::UnknowAction => "The action could not be determined",
-            ActionError::ArgumentNotFound => "The argument could not be found for this action",
-            ActionError::ArgumentInvalid => "The argument could not be parsed"
+            ActionError::UnknowAction => write!(f, "The action could not be determined"),
+            ActionError::ArgumentNotFound => write!(f, "The argument could not be found for this action"),
+            ActionError::ArgumentInvalid => write!(f, "The argument could not be parsed")
         }
     }
 }

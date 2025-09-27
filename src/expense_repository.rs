@@ -1,7 +1,8 @@
 use std::fs;
 use crate::models::{ExpenseList, ExpenseListError};
-use crate::models::errors::LocalizedError;
 
+use std::error::Error;
+use std::fmt;
 use std::fs:: { File };
 use serde_json;
 use crate::expense_repository::ExpenseRepositoryError::FailToCreateExpense;
@@ -67,6 +68,13 @@ pub fn create_expense(description: String, amount: i32) -> Result<(), ExpenseRep
     }
 }
 
+pub fn read_expenses() -> Result<ExpenseList, Box< dyn Error>> {
+    let expenses = open_or_create_file()?;
+    Ok(expenses)
+}
+
+
+#[derive(Debug)]
 pub enum ExpenseRepositoryError {
     FailToDecodeFile,
     FailToEncodeExpenses,
@@ -74,14 +82,15 @@ pub enum ExpenseRepositoryError {
     FailToCreateExpense(ExpenseListError)
 }
 
-impl LocalizedError for ExpenseRepositoryError {
-    fn localized_description(&self) -> &str {
+impl fmt::Display for ExpenseRepositoryError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ExpenseRepositoryError::FailToDecodeFile => { "Fail to decode expense file" }
-            ExpenseRepositoryError::FailToEncodeExpenses => { "Fail to encode expenses into json string" }
-            ExpenseRepositoryError::FailToWriteExpensesInFile => { "Fail to write expenses in the file" }
-            FailToCreateExpense( error) => { error.localized_description() }
-
+            ExpenseRepositoryError::FailToDecodeFile => write!(f, "Fail to decode expense file"),
+            ExpenseRepositoryError::FailToEncodeExpenses => write!(f, "Fail to encode expenses into json string"),
+            ExpenseRepositoryError::FailToWriteExpensesInFile => write!(f, "Fail to write expenses in the file"),
+            ExpenseRepositoryError::FailToCreateExpense( error) => write!(f, "Fail to create expense: {error}")
         }
     }
 }
+
+impl Error for ExpenseRepositoryError {}
