@@ -40,7 +40,7 @@ fn encode_expenses(expenses: &ExpenseList) -> Result<String, ExpenseRepositoryEr
     }
 }
 
-fn write_expense_in_file(expenses: &ExpenseList) -> Result<(), ExpenseRepositoryError> {
+pub fn write_expense(expenses: &ExpenseList) -> Result<(), ExpenseRepositoryError> {
     let string = encode_expenses(expenses)?;
     match fs::write(FILENAME, string) {
         Ok(_) => { Ok(()) },
@@ -54,7 +54,7 @@ pub fn create_expense(description: String, amount: i32) -> Result<(), ExpenseRep
         Ok(()) => {
             match expenses.last() {
                 Ok(last) => {
-                    write_expense_in_file(&expenses)?;
+                    write_expense(&expenses)?;
                     println!("Expense successfully created (ID: {})", last.id());
                     Ok(())
                 },

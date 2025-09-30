@@ -1,18 +1,18 @@
 use std::error::Error;
 use std::fmt;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Utc};
 use serde::{ Serialize, Deserialize };
 use crate::models::ExpenseListError::ExpenseNotFound;
 
 #[derive(Debug)]
 pub enum Action {
     Add { description: String, amount: i32 },
-    List ,
+    List { month: Option<u32> } ,
     Summary,
-    Delete { id: i32 }
+    Delete { id: usize }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Expense {
     id: u32,
     date: DateTime<Utc>,
@@ -55,13 +55,6 @@ impl ExpenseList {
         self.list.is_empty()
     }
 
-    pub fn first(&self) -> Result<&Expense, ExpenseListError> {
-        match self.list.first() {
-            Some(first) => Ok(first),
-            None => Err(ExpenseNotFound)
-        }
-    }
-
     pub fn last(&self) -> Result<&Expense, ExpenseListError> {
         match self.list.last() {
             Some(last) => Ok(last),
@@ -76,8 +69,34 @@ impl ExpenseList {
         }
     }
 
+    pub fn remove(&mut self, index: usize)  {
+        self.list.remove(index);
+    }
+
     pub fn len(&self) -> usize {
         self.list.len()
+    }
+
+    pub fn summary(&self) -> i32 {
+        let mut sum = 0;
+
+        if self.is_empty() {
+            return sum;
+        }
+
+        for expense in self.list.iter() {
+            sum += expense.amount();
+        }
+
+        sum
+    }
+
+    pub fn filter_for(&self, month: u32) -> Vec<&Expense> {
+        self.list.iter()
+            .enumerate()
+            .filter(|(_, expense)| expense.date().month() == month )
+            .map(|(_, expense)| expense)
+            .collect::<Vec<&Expense>>()
     }
 }
 
